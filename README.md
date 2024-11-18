@@ -6,7 +6,7 @@
       <img src="/github-metrics.svg" alt="Metrics" />
     </td>
     <td>
-      <img src="Your Name.jpg" alt="Your Profile Picture" style="border-radius: 15px;" />
+      <img src="Your Name.jpg" alt="Suga Shrine Stairs" style="width: 200px; height: auto;"/>
     </td>
   </tr>
 </table>
