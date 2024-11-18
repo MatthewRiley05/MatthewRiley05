@@ -5,8 +5,10 @@
     <td>
       <img src="/github-metrics.svg" alt="Metrics" />
     </td>
-    <td>
-      <img src="Your Name.png" alt="Suga Shrine Stairs" style="width: 200px; height: auto;"/>
+    <td align="center">
+      <img src="Your Name.png" alt="Suga Shrine Stairs" style="width: 200px; height: auto;" />
+      <br />
+      <sub style=display: inline-block;">I enjoy photography too! 📷</sub>
     </td>
   </tr>
 </table>
