@@ -1,5 +1,15 @@
 ## Hi there 👋
-![Metrics](/github-metrics.svg)
+
+<table>
+  <tr>
+    <td>
+      <img src="/github-metrics.svg" alt="Metrics" />
+    </td>
+    <td>
+      <img src="Your Name.jpg" alt="Your Profile Picture" style="border-radius: 15px;" />
+    </td>
+  </tr>
+</table>
 
 <!--
 **MatthewRiley05/MatthewRiley05** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
