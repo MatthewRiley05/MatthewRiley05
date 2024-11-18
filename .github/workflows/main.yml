@@ -19,6 +19,7 @@ jobs:
           token: ${{ secrets.METRICS_TOKEN }}
           config_timezone: Asia/Manila
           config_padding: 10
+          config_order: base.header, base.repositories, languages, activity
 
           base: header, activity, repositories
 
