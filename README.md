@@ -1,5 +1,6 @@
 ## Hi there 👋
 ![Metrics](/github-metrics.svg)
+![Metrics](/metrics.plugin.isocalendar.svg)
 
 <!--
 **MatthewRiley05/MatthewRiley05** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
