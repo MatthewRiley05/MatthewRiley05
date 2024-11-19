@@ -29,3 +29,4 @@ jobs:
           plugin_music_provider: "spotify"
           plugin_music_token: "c82c9c57bb19403e84ebb1585fc64077, 8f3e9f3f6f2d4ebc8ea590ec59df0228, AQA3Jjw50hdTQjtLTXrBJ0qV0379eflRduSvg2bwEZWDTdqmka0vXKE57oJHLODGEFCwzNCEriHJfugndpwfhQU4Oam9--QbvIzZRasZItuF8c65mJOlqSq2Sdhhc23pDk0"
           plugin_music_mode: "recent"
+          plugin_music_limit: 3
