@@ -50,6 +50,14 @@ def simple_request(func_name, query, variables):
     raise Exception(func_name, ' has failed with a', request.status_code, request.text, QUERY_COUNT)
 
 
+def valid_edges(edges):
+    """
+    Drops null edges and edges whose node is null.
+    GitHub returns these for deleted or inaccessible repositories.
+    """
+    return [e for e in (edges or []) if e is not None and e.get('node') is not None]
+
+
 def graph_commits(start_date, end_date):
     """
     Uses GitHub's GraphQL v4 API to return my total commit count
@@ -103,8 +111,7 @@ def graph_repos_stars(count_type, owner_affiliation, cursor=None, add_loc=0, del
         if count_type == 'repos':
             return request.json()['data']['user']['repositories']['totalCount']
         elif count_type == 'stars':
-            edges = [e for e in request.json()['data']['user']['repositories']['edges'] if e.get('node') is not None]
-            return stars_counter(edges)
+            return stars_counter(valid_edges(request.json()['data']['user']['repositories']['edges']))
 
 
 def recursive_loc(owner, repo_name, data, cache_comment, addition_total=0, deletion_total=0, my_commits=0, cursor=None):
@@ -161,8 +168,9 @@ def loc_counter_one_repo(owner, repo_name, data, cache_comment, history, additio
     Recursively call recursive_loc (since GraphQL can only search 100 commits at a time) 
     only adds the LOC value of commits authored by me
     """
-    for node in history['edges']:
-        if node['node']['author']['user'] == OWNER_ID:
+    for node in valid_edges(history['edges']):
+        author = node['node'].get('author') or {}
+        if (author.get('user') or {}) == OWNER_ID:
             my_commits += 1
             addition_total += node['node']['additions']
             deletion_total += node['node']['deletions']
@@ -210,8 +218,7 @@ def loc_query(owner_affiliation, comment_size=0, force_cache=False, cursor=None,
     variables = {'owner_affiliation': owner_affiliation, 'login': USER_NAME, 'cursor': cursor}
     request = simple_request(loc_query.__name__, query, variables)
     repositories = request.json()['data']['user']['repositories']
-    # Some edges can have a null node (deleted/inaccessible repos). Skip them.
-    new_edges = [e for e in repositories['edges'] if e.get('node') is not None]
+    new_edges = valid_edges(repositories['edges'])
     if repositories['pageInfo']['hasNextPage']:   # If repository data has another page
         edges += new_edges                        # Add on to the LoC count
         return loc_query(owner_affiliation, comment_size, force_cache, repositories['pageInfo']['endCursor'], edges)
@@ -225,7 +232,7 @@ def cache_builder(edges, comment_size, force_cache, loc_add=0, loc_del=0):
     If it has, run recursive_loc on that repository to update the LOC count
     """
     cached = True # Assume all repositories are cached
-    edges = [e for e in edges if e.get('node') is not None] # Skip deleted/inaccessible repos
+    edges = valid_edges(edges)
     filename = 'cache/'+hashlib.sha256(USER_NAME.encode('utf-8')).hexdigest()+'.txt' # Create a unique filename for each user
     try:
         with open(filename, 'r') as f:
@@ -277,9 +284,7 @@ def flush_cache(edges, filename, comment_size):
             data = f.readlines()[:comment_size] # only save the comment
     with open(filename, 'w') as f:
         f.writelines(data)
-        for node in edges:
-            if node.get('node') is None: # Skip deleted/inaccessible repos
-                continue
+        for node in valid_edges(edges):
             f.write(hashlib.sha256(node['node']['nameWithOwner'].encode('utf-8')).hexdigest() + ' 0 0 0 0\n')
 
 
@@ -319,9 +324,8 @@ def stars_counter(data):
     Count total stars in repositories owned by me
     """
     total_stars = 0
-    for node in data:
-        if node.get('node') is not None: # Skip deleted/inaccessible repos
-            total_stars += node['node']['stargazers']['totalCount']
+    for node in valid_edges(data):
+        total_stars += node['node']['stargazers']['totalCount']
     return total_stars
 
 
