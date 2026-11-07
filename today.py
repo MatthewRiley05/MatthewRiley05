@@ -329,19 +329,50 @@ def stars_counter(data):
     return total_stars
 
 
+def public_star_count():
+    """
+    Counts stars on public owned repos via the REST API.
+    Used as a fallback when the GraphQL count comes back as zero.
+    """
+    total, page = 0, 1
+    while True:
+        request = requests.get(
+            'https://api.github.com/users/' + USER_NAME + '/repos',
+            params={'per_page': 100, 'page': page, 'type': 'owner'},
+        )
+        if request.status_code != 200:
+            return total
+        repos = request.json()
+        if not repos:
+            return total
+        total += sum(repo.get('stargazers_count', 0) for repo in repos)
+        if len(repos) < 100:
+            return total
+        page += 1
+
+
+def get_stars():
+    """
+    Returns stars received on owned repositories, using the GraphQL count
+    with a public REST fallback so a valid star never shows up as zero.
+    """
+    stars = graph_repos_stars('stars', ['OWNER'])
+    return stars if stars else public_star_count()
+
+
 def svg_overwrite(filename, age_data, commit_data, star_data, repo_data, contrib_data, follower_data, loc_data):
     """
     Parse SVG files and update elements with my age, commits, stars, repositories, and lines written
     """
     tree = etree.parse(filename)
     root = tree.getroot()
-    justify_format(root, 'age_data', age_data, 22)
+    justify_format(root, 'age_data', age_data, 48)
     justify_format(root, 'commit_data', commit_data, 22)
     justify_format(root, 'star_data', star_data, 14)
     justify_format(root, 'repo_data', repo_data, 6)
-    justify_format(root, 'contrib_data', contrib_data)
+    justify_format(root, 'contrib_data', contrib_data, 3)
     justify_format(root, 'follower_data', follower_data, 10)
-    justify_format(root, 'loc_data', loc_data[2], 9)
+    justify_format(root, 'loc_data', loc_data[2], 11)
     justify_format(root, 'loc_add', loc_data[0])
     justify_format(root, 'loc_del', loc_data[1], 7)
     tree.write(filename, encoding='utf-8', xml_declaration=True)
@@ -469,7 +500,7 @@ if __name__ == '__main__':
     total_loc, loc_time = perf_counter(loc_query, ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'], 7)
     formatter('LOC (cached)', loc_time) if total_loc[-1] else formatter('LOC (no cache)', loc_time)
     commit_data, commit_time = perf_counter(commit_counter, 7)
-    star_data, star_time = perf_counter(graph_repos_stars, 'stars', ['OWNER'])
+    star_data, star_time = perf_counter(get_stars)
     repo_data, repo_time = perf_counter(graph_repos_stars, 'repos', ['OWNER'])
     contrib_data, contrib_time = perf_counter(graph_repos_stars, 'repos', ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'])
     follower_data, follower_time = perf_counter(follower_getter, USER_NAME)
