@@ -103,7 +103,8 @@ def graph_repos_stars(count_type, owner_affiliation, cursor=None, add_loc=0, del
         if count_type == 'repos':
             return request.json()['data']['user']['repositories']['totalCount']
         elif count_type == 'stars':
-            return stars_counter(request.json()['data']['user']['repositories']['edges'])
+            edges = [e for e in request.json()['data']['user']['repositories']['edges'] if e.get('node') is not None]
+            return stars_counter(edges)
 
 
 def recursive_loc(owner, repo_name, data, cache_comment, addition_total=0, deletion_total=0, my_commits=0, cursor=None):
@@ -208,11 +209,14 @@ def loc_query(owner_affiliation, comment_size=0, force_cache=False, cursor=None,
     }'''
     variables = {'owner_affiliation': owner_affiliation, 'login': USER_NAME, 'cursor': cursor}
     request = simple_request(loc_query.__name__, query, variables)
-    if request.json()['data']['user']['repositories']['pageInfo']['hasNextPage']:   # If repository data has another page
-        edges += request.json()['data']['user']['repositories']['edges']            # Add on to the LoC count
-        return loc_query(owner_affiliation, comment_size, force_cache, request.json()['data']['user']['repositories']['pageInfo']['endCursor'], edges)
+    repositories = request.json()['data']['user']['repositories']
+    # Some edges can have a null node (deleted/inaccessible repos). Skip them.
+    new_edges = [e for e in repositories['edges'] if e.get('node') is not None]
+    if repositories['pageInfo']['hasNextPage']:   # If repository data has another page
+        edges += new_edges                        # Add on to the LoC count
+        return loc_query(owner_affiliation, comment_size, force_cache, repositories['pageInfo']['endCursor'], edges)
     else:
-        return cache_builder(edges + request.json()['data']['user']['repositories']['edges'], comment_size, force_cache)
+        return cache_builder(edges + new_edges, comment_size, force_cache)
 
 
 def cache_builder(edges, comment_size, force_cache, loc_add=0, loc_del=0):
@@ -221,6 +225,7 @@ def cache_builder(edges, comment_size, force_cache, loc_add=0, loc_del=0):
     If it has, run recursive_loc on that repository to update the LOC count
     """
     cached = True # Assume all repositories are cached
+    edges = [e for e in edges if e.get('node') is not None] # Skip deleted/inaccessible repos
     filename = 'cache/'+hashlib.sha256(USER_NAME.encode('utf-8')).hexdigest()+'.txt' # Create a unique filename for each user
     try:
         with open(filename, 'r') as f:
@@ -273,6 +278,8 @@ def flush_cache(edges, filename, comment_size):
     with open(filename, 'w') as f:
         f.writelines(data)
         for node in edges:
+            if node.get('node') is None: # Skip deleted/inaccessible repos
+                continue
             f.write(hashlib.sha256(node['node']['nameWithOwner'].encode('utf-8')).hexdigest() + ' 0 0 0 0\n')
 
 
@@ -312,7 +319,9 @@ def stars_counter(data):
     Count total stars in repositories owned by me
     """
     total_stars = 0
-    for node in data: total_stars += node['node']['stargazers']['totalCount']
+    for node in data:
+        if node.get('node') is not None: # Skip deleted/inaccessible repos
+            total_stars += node['node']['stargazers']['totalCount']
     return total_stars
 
 
